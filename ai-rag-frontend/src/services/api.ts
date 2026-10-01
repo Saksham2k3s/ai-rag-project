@@ -1,6 +1,6 @@
 import { AuthResponse, PDFDocument, UploadResponse, Conversation, SearchResponse } from '../types';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL as string)?.replace(/\/$/, '') || '/api';
 
 /**
  * Helper to retrieve stored auth token
