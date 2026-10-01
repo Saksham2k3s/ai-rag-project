@@ -45,6 +45,7 @@ const MainLayout: React.FC = () => {
         <Sidebar
           isOpen={isSidebarOpen}
           onCloseMobile={() => setIsSidebarOpen(false)}
+          onSwitchToChat={() => setActiveTab('chat')}
         />
 
         {/* Main Workspace Area */}

@@ -5,9 +5,10 @@ import { MessageSquarePlus, MessageSquare, FileText, ChevronRight, Sparkles, Che
 interface SidebarProps {
   isOpen: boolean;
   onCloseMobile: () => void;
+  onSwitchToChat?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile, onSwitchToChat }) => {
   const {
     conversations,
     currentConversationId,
@@ -38,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
           <button
             onClick={() => {
               startNewChat();
+              onSwitchToChat?.();
               onCloseMobile();
             }}
             className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-brand-600 to-accent-violet hover:from-brand-500 hover:to-accent-violet text-white font-semibold shadow-glow-indigo transition-all duration-200 flex items-center justify-center gap-2.5 mb-6 group"
@@ -75,6 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
                     key={conv.id}
                     onClick={() => {
                       selectConversation(conv.id);
+                      onSwitchToChat?.();
                       onCloseMobile();
                     }}
                     className={`w-full text-left p-3 rounded-xl transition-all duration-200 flex items-center justify-between group ${
