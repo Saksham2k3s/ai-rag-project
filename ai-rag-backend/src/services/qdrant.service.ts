@@ -21,19 +21,32 @@ export async function createCollection() {
     (collection) => collection.name === COLLECTION_NAME
   );
 
-  if (exists) {
+  if (!exists) {
+    await qdrant.createCollection(COLLECTION_NAME, {
+      vectors: {
+        size: 3072,
+        distance: "Cosine",
+      },
+    });
+
+    console.log("Collection created");
+  } else {
     console.log("Collection already exists");
-    return;
   }
 
-  await qdrant.createCollection(COLLECTION_NAME, {
-    vectors: {
-      size: 3072,
-      distance: "Cosine",
-    },
+  // Create payload index for ownerId
+  await qdrant.createPayloadIndex(COLLECTION_NAME, {
+    field_name: "ownerId",
+    field_schema: "keyword",
   });
 
-  console.log("Collection created");
+  // Create payload index for documentId
+  await qdrant.createPayloadIndex(COLLECTION_NAME, {
+    field_name: "documentId",
+    field_schema: "keyword",
+  });
+
+  console.log("Payload indexes ready");
 }
 
 export async function insertDocumentChunks(
