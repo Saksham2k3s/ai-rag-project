@@ -23,6 +23,12 @@ export async function uploadDocument(req: Request, res: Response) {
       });
     }
 
+    if (req.file.buffer.toString().substring(0, 5) !== "%PDF-") {
+      return res.status(400).json({
+        message: "Only PDF files are allowed",
+      });
+    }
+
     const ownerId = req.user?.userId;
 
     if (!ownerId) {
@@ -110,7 +116,7 @@ export async function searchDocuments(req: Request, res: Response) {
       queryEmbedding,
       3,
       documentId,
-      ownerId
+      ownerId,
     );
 
     // 6. Retrieved chunks → context
