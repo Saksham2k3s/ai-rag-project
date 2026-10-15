@@ -13,6 +13,7 @@ import {
   getConversation,
   addMessage,
 } from "../services/conversation.service.js";
+import { RAG_CONFIG } from "../config/rag.config.js";
 
 export async function chat(req: Request, res: Response) {
   try {
@@ -55,7 +56,7 @@ export async function chat(req: Request, res: Response) {
         where: {
           id: cleanDocumentId,
           ownerId,
-          status: "ACTIVE"
+          status: "ACTIVE",
         },
       });
 
@@ -117,7 +118,7 @@ export async function chat(req: Request, res: Response) {
     // documentId absent → search all user's documents
     const results = await searchSimilarChunks(
       queryEmbedding,
-      3,
+      RAG_CONFIG.retrievalLimit,
       cleanDocumentId,
       ownerId,
     );

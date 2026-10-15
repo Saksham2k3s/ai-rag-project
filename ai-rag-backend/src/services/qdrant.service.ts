@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { QdrantClient } from "@qdrant/js-client-rest";
+import { RAG_CONFIG } from "../config/rag.config";
 
 const qdrantUrl = process.env.QDRANT_URL;
 
@@ -18,7 +19,7 @@ export async function createCollection() {
   const collections = await qdrant.getCollections();
 
   const exists = collections.collections.some(
-    (collection) => collection.name === COLLECTION_NAME
+    (collection) => collection.name === COLLECTION_NAME,
   );
 
   if (!exists) {
@@ -53,7 +54,7 @@ export async function insertDocumentChunks(
   documentId: string,
   ownerId: string,
   chunks: string[],
-  embeddings: number[][]
+  embeddings: number[][],
 ) {
   const points = chunks.map((chunk, index) => ({
     id: crypto.randomUUID(),
@@ -78,7 +79,7 @@ export async function searchSimilarChunks(
   queryEmbedding: number[],
   limit = 3,
   documentId?: string,
-  ownerId?: string
+  ownerId?: string,
 ) {
   const must: any[] = [];
 
@@ -108,12 +109,12 @@ export async function searchSimilarChunks(
     filter: must.length > 0 ? { must } : undefined,
   });
 
-  return result.points;
+  return result.points.filter(
+    (point) => point.score && point.score > RAG_CONFIG.similarityThreshold,
+  );
 }
 
-export async function deleteDocumentChunks(
-  documentId: string
-) {
+export async function deleteDocumentChunks(documentId: string) {
   await qdrant.delete(COLLECTION_NAME, {
     filter: {
       must: [
