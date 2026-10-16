@@ -14,6 +14,7 @@ import {
   addMessage,
 } from "../services/conversation.service.js";
 import { RAG_CONFIG } from "../config/rag.config.js";
+import { rerankChunks } from "../services/reranking.service.js";
 
 export async function chat(req: Request, res: Response) {
   try {
@@ -123,8 +124,27 @@ export async function chat(req: Request, res: Response) {
       ownerId,
     );
 
+    const chunkTexts = results.map((point) =>
+      String(point.payload?.text ?? ""),
+    );
+
+    let rankedIndexes: number[];
+    try {
+      rankedIndexes = await rerankChunks(cleanMessage, chunkTexts);
+    } catch (rerankError) {
+      console.warn(
+        "Reranking encountered an unexpected error, falling back to original similarity order:",
+        rerankError,
+      );
+      rankedIndexes = results.map((_, index) => index);
+    }
+
+    const rerankedResults = rankedIndexes.map((index) => results[index]);
+
+    console.log(`Reranked results:`, rerankedResults);
+
     // 10. Retrieved chunks → context
-    const context = buildContext(results);
+    const context = buildContext(rerankedResults);
 
     // 11. Context + question → RAG prompt
     const prompt = buildRagPrompt(cleanMessage, context, conversationHistory);

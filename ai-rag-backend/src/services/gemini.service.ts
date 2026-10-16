@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type GenerateContentConfig } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -10,13 +10,40 @@ const ai = new GoogleGenAI({
     apiKey: apiKey,
 });
 
-export async function generateText(prompt: string) {
-  const response = await ai.models.generateContent({
-    model: "gemini-3.5-flash-lite",
-    contents: prompt,
-  });
+export async function generateText(
+  prompt: string,
+  config?: GenerateContentConfig,
+  maxRetries = 3
+) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash-lite",
+        contents: prompt,
+        config,
+      });
 
-  return response.text;
+      return response.text;
+    } catch (error: any) {
+      const status = error?.status;
+
+      if (status !== 503 || attempt === maxRetries) {
+        throw error;
+      }
+
+      const delay = 2000 * Math.pow(2, attempt);
+
+      console.log(
+        `Gemini is busy. Retrying in ${delay / 1000}s...`
+      );
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, delay)
+      );
+    }
+  }
+
+  throw new Error("Failed to generate Gemini response");
 }
 
 export async function generateTextStream(
