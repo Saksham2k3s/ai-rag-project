@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { MessageSquarePlus, MessageSquare, FileText, ChevronRight, Sparkles, CheckCircle, Database } from 'lucide-react';
+import { MessageSquarePlus, MessageSquare, FileText, ChevronRight, Sparkles, CheckCircle, Database, X } from 'lucide-react';
+import { Logo } from '../ui/Logo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -35,6 +36,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile, onSwitc
         }`}
       >
         <div className="p-4 flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Logo & Close */}
+          <div className="flex md:hidden items-center justify-between pb-3.5 mb-3 border-b border-slate-800/80">
+            <Logo size="sm" />
+            <button
+              onClick={onCloseMobile}
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              title="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
           {/* New Chat Button */}
           <button
             onClick={() => {

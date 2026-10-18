@@ -1,0 +1,60 @@
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cogni-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="55%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="spark-grad" x1="14" y1="7" x2="26" y2="21" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#C7D2FE" />
+    </linearGradient>
+    <filter id="spark-glow" x="9" y="3" width="22" height="22" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect width="40" height="40" rx="10" fill="url(#cogni-grad)" />
+  
+  <!-- Subtle border highlight -->
+  <rect
+    x="0.75"
+    y="0.75"
+    width="38.5"
+    height="38.5"
+    rx="9.25"
+    stroke="white"
+    stroke-opacity="0.25"
+    stroke-width="1.5"
+  />
+
+  <!-- Retrieval Layer 2 (Bottom) -->
+  <path
+    d="M11 25.5L20 29.5L29 25.5"
+    stroke="white"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-opacity="0.5"
+  />
+
+  <!-- Retrieval Layer 1 (Middle) -->
+  <path
+    d="M11 20.5L20 24.5L29 20.5"
+    stroke="white"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-opacity="0.85"
+  />
+
+  <!-- AI Intelligence Spark (Top) -->
+  <path
+    d="M20 7.5L22.5 12.8L28 14.5L22.5 16.2L20 21.5L17.5 16.2L12 14.5L17.5 12.8L20 7.5Z"
+    fill="url(#spark-grad)"
+    filter="url(#spark-glow)"
+  />
+</svg>
+

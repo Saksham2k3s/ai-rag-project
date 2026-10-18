@@ -141,8 +141,6 @@ export async function chat(req: Request, res: Response) {
 
     const rerankedResults = rankedIndexes.map((index) => results[index]);
 
-    console.log(`Reranked results:`, rerankedResults);
-
     // 10. Retrieved chunks → context
     const context = buildContext(rerankedResults);
 

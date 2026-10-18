@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { Bot, Sparkles, FileText, Layers, PlusCircle } from 'lucide-react';
+import { Sparkles, FileText, Layers, PlusCircle } from 'lucide-react';
+import { LogoIcon } from '../ui/Logo';
 
 export const ChatHeader: React.FC = () => {
   const { conversations, currentConversationId, startNewChat, documents, selectedDocumentId } = useApp();
@@ -11,9 +12,7 @@ export const ChatHeader: React.FC = () => {
   return (
     <div className="px-6 py-3.5 border-b border-slate-800/80 glass-panel flex items-center justify-between backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400">
-          <Bot className="w-5 h-5" />
-        </div>
+        <LogoIcon size={32} />
         <div>
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
             {activeConv?.title || 'New AI RAG Chat'}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { Bot, LogOut, FileText, Sparkles, Layers, User as UserIcon, Menu } from 'lucide-react';
+import { LogOut, FileText, Sparkles, Layers, User as UserIcon, Menu } from 'lucide-react';
+import { Logo } from '../ui/Logo';
 
 interface NavbarProps {
   activeTab: 'chat' | 'documents';
@@ -27,16 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, toggleS
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-violet shadow-glow-indigo">
-            <Bot className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <span className="text-lg font-extrabold tracking-tight text-white flex items-center gap-1">
-              Cogni<span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-accent-cyan">RAG</span>
-            </span>
-          </div>
-        </div>
+        <Logo size="md" />
 
         {/* Selected target doc indicator pill */}
         <div className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs text-slate-300">

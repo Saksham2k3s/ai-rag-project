@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, Bot, ShieldCheck } from 'lucide-react';
+import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Logo } from '../ui/Logo';
 
 export const AuthModal: React.FC = () => {
   const { login, register } = useAuth();
@@ -46,17 +47,13 @@ export const AuthModal: React.FC = () => {
       <div className="bg-glow-orb-2" />
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo & Header Header */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-violet shadow-glow-indigo mb-4 border border-indigo-400/30">
-            <Bot className="w-9 h-9 text-white" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
-            Cogni<span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-accent-violet to-accent-cyan">RAG</span>
-          </h1>
-          <p className="mt-2 text-sm text-slate-400 font-medium">
-            Next-Gen RAG Intelligence Powered by Vector Search
-          </p>
+        {/* Logo & Header */}
+        <div className="text-center mb-8 animate-fade-in flex justify-center">
+          <Logo
+            size="lg"
+            layout="vertical"
+            subtitle="Next-Gen RAG Intelligence Powered by Vector Search"
+          />
         </div>
 
         {/* Card Container */}
