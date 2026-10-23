@@ -4,6 +4,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch --import dotenv/config src/app.ts",
+    "worker": "tsx --import dotenv/config src/worker.ts",
+    "worker:dev": "tsx watch --import dotenv/config src/worker.ts",
+    "worker:prod": "node dist/worker.js",
     "build": "tsc",
     "start": "node dist/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,6 +18,7 @@
     "@google/genai": "^2.21.0",
     "@prisma/client": "^6.19.3",
     "@qdrant/js-client-rest": "^1.19.0",
+    "@supabase/supabase-js": "^2.118.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.4.0",
     "cors": "^2.8.6",

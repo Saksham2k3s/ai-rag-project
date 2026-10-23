@@ -51,19 +51,36 @@ export async function chat(req: Request, res: Response) {
     const cleanDocumentId =
       typeof documentId === "string" ? documentId.trim() : undefined;
 
-    // 4. Verify document ownership
+    // 4. Verify document ownership and status
     if (cleanDocumentId) {
       const document = await prisma.document.findFirst({
         where: {
           id: cleanDocumentId,
           ownerId,
-          status: "ACTIVE",
         },
       });
 
       if (!document) {
         return res.status(404).json({
           message: "Document not found",
+        });
+      }
+
+      if (document.status === "PROCESSING") {
+        return res.status(400).json({
+          message: "Document is still processing. Please wait until processing completes.",
+        });
+      }
+
+      if (document.status === "FAILED") {
+        return res.status(400).json({
+          message: "Document processing failed. Please re-upload the document.",
+        });
+      }
+
+      if (document.status !== "ACTIVE") {
+        return res.status(400).json({
+          message: "Document is not available for chat",
         });
       }
     }
