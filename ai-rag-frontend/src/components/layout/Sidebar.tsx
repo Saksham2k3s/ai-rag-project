@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { MessageSquarePlus, MessageSquare, FileText, ChevronRight, Sparkles, CheckCircle, Database, X } from 'lucide-react';
+import { MessageSquarePlus, MessageSquare, FileText, ChevronRight, Sparkles, CheckCircle, Database, X, Loader2 } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 
 interface SidebarProps {
@@ -130,27 +130,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile, onSwitc
                     : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                 }`}
               >
-                <span className="truncate">All Documents ({documents.length})</span>
+                <span className="truncate">
+                  All Ready Documents ({documents.filter((d) => d.status === 'ACTIVE').length})
+                </span>
                 {selectedDocumentId === undefined && <CheckCircle className="w-3.5 h-3.5 text-brand-400" />}
               </button>
 
-              {documents.map((doc) => (
-                <button
-                  key={doc.id}
-                  onClick={() => setSelectedDocumentId(doc.id)}
-                  className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
-                    selectedDocumentId === doc.id
-                      ? 'bg-slate-800 text-brand-300 font-semibold border border-brand-500/30'
-                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                    <span className="truncate">{doc.filename}</span>
-                  </div>
-                  {selectedDocumentId === doc.id && <CheckCircle className="w-3.5 h-3.5 text-brand-400 shrink-0" />}
-                </button>
-              ))}
+              {documents.map((doc) => {
+                const isDocActive = doc.status === 'ACTIVE';
+
+                return (
+                  <button
+                    key={doc.id}
+                    onClick={() => setSelectedDocumentId(doc.id)}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                      selectedDocumentId === doc.id
+                        ? 'bg-slate-800 text-brand-300 font-semibold border border-brand-500/30'
+                        : isDocActive
+                        ? 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                        : 'text-slate-500 opacity-75 hover:bg-slate-800/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">{doc.filename}</span>
+                    </div>
+
+                    {selectedDocumentId === doc.id && (
+                      <CheckCircle className="w-3.5 h-3.5 text-brand-400 shrink-0 ml-1" />
+                    )}
+
+                    {doc.status === 'PROCESSING' && (
+                      <span className="text-[10px] text-amber-400/90 font-medium ml-2 flex items-center gap-1 shrink-0">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> Processing
+                      </span>
+                    )}
+
+                    {doc.status === 'FAILED' && (
+                      <span className="text-[10px] text-rose-400 font-medium ml-2 shrink-0">
+                        Failed
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

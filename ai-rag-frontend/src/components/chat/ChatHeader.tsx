@@ -23,7 +23,7 @@ export const ChatHeader: React.FC = () => {
             {selectedDoc ? (
               <span className="text-brand-300 font-semibold">{selectedDoc.filename}</span>
             ) : (
-              <span className="text-slate-300 font-medium">Global Search ({documents.length} PDFs)</span>
+              <span className="text-slate-300 font-medium">Global Search ({documents.filter((d) => d.status === 'ACTIVE').length} Ready PDFs)</span>
             )}
           </p>
         </div>

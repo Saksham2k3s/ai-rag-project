@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PDFDocument } from '../../types';
 import { formatBytes, formatDate } from '../../utils/formatters';
-import { FileText, Trash2, MessageSquare, Layers, Clock, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { FileText, Trash2, MessageSquare, Layers, Clock, CheckCircle2, AlertTriangle, AlertCircle, Loader2, X } from 'lucide-react';
 
 interface DocumentListProps {
   onAskQuestion: (docId: string) => void;
@@ -93,38 +93,93 @@ export const DocumentList: React.FC<DocumentListProps> = ({ onAskQuestion }) => 
                   </button>
                 </div>
 
-                {/* Vector Chunks Badge */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold">
-                    <Layers className="w-3.5 h-3.5 text-brand-400" /> {doc.totalChunks} Chunks Vectorized
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-medium">
-                    <CheckCircle2 className="w-3 h-3" /> Ready
-                  </span>
+                {/* Status & Chunks Badges */}
+                <div className="flex flex-wrap items-center gap-2 mb-4 min-h-[28px]">
+                  {doc.status === 'PROCESSING' && (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold animate-pulse">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> Processing...
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        Analyzing & generating vectors
+                      </span>
+                    </>
+                  )}
+
+                  {doc.status === 'ACTIVE' && (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold">
+                        <Layers className="w-3.5 h-3.5 text-brand-400" /> {doc.totalChunks} Chunks Vectorized
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-medium">
+                        <CheckCircle2 className="w-3 h-3" /> Ready
+                      </span>
+                    </>
+                  )}
+
+                  {doc.status === 'FAILED' && (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-400" /> Processing failed
+                      </span>
+                      <span className="text-[11px] text-rose-400/80">
+                        Unable to extract or vectorize
+                      </span>
+                    </>
+                  )}
+
+                  {doc.status === 'DELETING' && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-semibold">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" /> Deleting...
+                    </span>
+                  )}
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 pt-3 border-t border-slate-800/80">
-                <button
-                  onClick={() => {
-                    setSelectedDocumentId(isSelected ? undefined : doc.id);
-                  }}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                    isSelected
-                      ? 'bg-brand-600 text-white shadow-md'
-                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/50'
-                  }`}
-                >
-                  {isSelected ? '✓ Selected for RAG' : 'Select Target Scope'}
-                </button>
+                {doc.status === 'ACTIVE' ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedDocumentId(isSelected ? undefined : doc.id);
+                      }}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'bg-brand-600 text-white shadow-md'
+                          : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/50'
+                      }`}
+                    >
+                      {isSelected ? '✓ Selected for RAG' : 'Select Target Scope'}
+                    </button>
 
-                <button
-                  onClick={() => onAskQuestion(doc.id)}
-                  className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-brand-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" /> Ask AI
-                </button>
+                    <button
+                      onClick={() => onAskQuestion(doc.id)}
+                      className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-brand-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> Ask AI
+                    </button>
+                  </>
+                ) : doc.status === 'PROCESSING' ? (
+                  <div className="w-full py-2 px-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-amber-300/80 flex items-center justify-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                    <span>Processing in background... Available once ready</span>
+                  </div>
+                ) : doc.status === 'FAILED' ? (
+                  <div className="w-full flex items-center justify-between py-1.5 px-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-xs text-rose-300">
+                    <span>Processing failed. Please delete & re-upload.</span>
+                    <button
+                      onClick={() => setConfirmDeleteDoc(doc)}
+                      className="text-xs font-semibold underline hover:text-rose-200 ml-2"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full py-2 px-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-500 text-center">
+                    Deleting document...
+                  </div>
+                )}
               </div>
             </div>
           );

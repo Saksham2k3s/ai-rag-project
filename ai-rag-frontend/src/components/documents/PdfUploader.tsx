@@ -60,32 +60,21 @@ export const PdfUploader: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-tr from-brand-600/5 via-transparent to-accent-violet/5 pointer-events-none" />
 
         {isUploading ? (
-          <div className="flex flex-col items-center justify-center py-4 space-y-4 animate-fade-in">
-            <div className="relative w-16 h-16 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-4 space-y-3 animate-fade-in">
+            <div className="relative w-14 h-14 flex items-center justify-center">
               <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
-              <div
-                className="absolute inset-0 rounded-full border-4 border-brand-500 border-t-transparent animate-spin"
-              />
-              <Cpu className="w-7 h-7 text-brand-400 animate-pulse" />
+              <div className="absolute inset-0 rounded-full border-4 border-brand-500 border-t-transparent animate-spin" />
+              <UploadCloud className="w-6 h-6 text-brand-400 animate-pulse" />
             </div>
 
             <div>
               <h3 className="text-base font-bold text-white flex items-center justify-center gap-2">
-                Processing PDF Vectors <Sparkles className="w-4 h-4 text-brand-400 animate-bounce" />
+                Uploading PDF...
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Extracting text → Chunking → Generating Embeddings → Qdrant Indexing
+                Uploading to vault. Background vector processing will start immediately.
               </p>
             </div>
-
-            {/* Progress Bar */}
-            <div className="w-full max-w-xs bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-700">
-              <div
-                className="bg-gradient-to-r from-brand-500 to-accent-cyan h-full rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            <span className="text-xs font-semibold text-brand-300">{uploadProgress}% Complete</span>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-2 space-y-3">
