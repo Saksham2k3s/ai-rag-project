@@ -7,6 +7,55 @@ import authRouter from "./routes/auth.route.js";
 import conversationRouter from "./routes/conversation.routes.js";
 
 import { createCollection } from "./services/qdrant.service.js";
+import { prisma } from "./services/prisma.service.js";
+import { documentQueue } from "./queues/document.queue.js";
+
+// Initialize BullMQ worker inline for standard/dev server execution
+if (process.env.DISABLE_INLINE_WORKER !== "true") {
+  import("./workers/document.worker.js")
+    .then(() => {
+      console.log("Document processing worker active");
+    })
+    .catch((err) => {
+      console.error("Failed to initialize document worker:", err);
+    });
+}
+
+// Reconcile and process any documents that were stuck in PROCESSING
+async function reconcileStuckDocuments() {
+  try {
+    const stuckDocs = await prisma.document.findMany({
+      where: { status: "PROCESSING" },
+    });
+
+    if (stuckDocs.length > 0) {
+      console.log(`[Worker] Found ${stuckDocs.length} pending document(s) in PROCESSING state.`);
+      for (const doc of stuckDocs) {
+        console.log(`[Worker] Enqueueing pending document: ${doc.id} (${doc.filename})`);
+        await documentQueue.add(
+          "process-pdf",
+          {
+            documentId: doc.id,
+            ownerId: doc.ownerId,
+            storagePath: `${doc.ownerId}/${doc.id}.pdf`,
+          },
+          {
+            jobId: `reconcile-${doc.id}`,
+            attempts: 3,
+            backoff: {
+              type: "exponential",
+              delay: 2000,
+            },
+            removeOnComplete: 100,
+            removeOnFail: 500,
+          },
+        );
+      }
+    }
+  } catch (err: any) {
+    console.warn("Could not reconcile stuck documents on startup:", err.message);
+  }
+}
 
 const app = express();
 
@@ -40,10 +89,13 @@ app.use("/api", conversationRouter);
 const PORT = process.env.PORT || 4000;
 
 createCollection()
-  .then(() => {
+  .then(async () => {
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });
+
+    // Reconcile and process any documents that were stuck in PROCESSING
+    await reconcileStuckDocuments();
   })
   .catch((error) => {
     console.error("Failed to initialize Qdrant:", error);

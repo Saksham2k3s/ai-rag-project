@@ -6,3 +6,11 @@ export const redis = new Redis(
     maxRetriesPerRequest: null,
   },
 );
+
+redis.on("error", (error) => {
+  console.error("Redis connection error:", error.message);
+});
+
+redis.on("connect", () => {
+  console.log("Redis connected successfully");
+});

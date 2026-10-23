@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import {
   deleteDocument,
+  getDocumentStatus,
   getDocuments,
   searchDocuments,
   uploadDocument,
@@ -32,6 +33,8 @@ router.post(
 );
 
 router.get("/documents", authenticate, getDocuments);
+
+router.get("/documents/:documentId/status", authenticate, getDocumentStatus);
 
 router.delete("/documents/:id", authenticate, deleteDocument);
 

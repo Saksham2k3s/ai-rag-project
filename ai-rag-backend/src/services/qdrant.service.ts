@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { QdrantClient } from "@qdrant/js-client-rest";
-import { RAG_CONFIG } from "../config/rag.config";
+import { RAG_CONFIG } from "../config/rag.config.js";
 
 const qdrantUrl = process.env.QDRANT_URL;
 
@@ -50,14 +50,37 @@ export async function createCollection() {
   console.log("Payload indexes ready");
 }
 
+/**
+ * Deterministically generates an RFC 4122 compliant UUID v5 for a document chunk.
+ * Guarantees idempotent Qdrant upserts across retries without duplicate vectors.
+ */
+export function generatePointId(documentId: string, chunkIndex: number): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${documentId}:${chunkIndex}`)
+    .digest("hex");
+
+  return [
+    hash.substring(0, 8),
+    hash.substring(8, 12),
+    "5" + hash.substring(13, 16),
+    ((parseInt(hash.substring(16, 18), 16) & 0x3f) | 0x80).toString(16) +
+      hash.substring(18, 20),
+    hash.substring(20, 32),
+  ].join("-");
+}
+
 export async function insertDocumentChunks(
   documentId: string,
   ownerId: string,
   chunks: string[],
   embeddings: number[][],
 ) {
+  // Clean up any existing chunks for this document in case of retry
+  await deleteDocumentChunks(documentId);
+
   const points = chunks.map((chunk, index) => ({
-    id: crypto.randomUUID(),
+    id: generatePointId(documentId, index),
     vector: embeddings[index],
     payload: {
       documentId,
@@ -72,7 +95,7 @@ export async function insertDocumentChunks(
     points,
   });
 
-  console.log(`${points.length} chunks inserted into Qdrant`);
+  console.log(`${points.length} chunks inserted into Qdrant for document ${documentId}`);
 }
 
 export async function searchSimilarChunks(
