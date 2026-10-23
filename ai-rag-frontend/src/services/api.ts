@@ -1,4 +1,4 @@
-import { AuthResponse, PDFDocument, UploadResponse, Conversation, SearchResponse } from '../types';
+import { AuthResponse, PDFDocument, UploadResponse, DocumentStatusResponse, Conversation, SearchResponse } from '../types';
 
 // Safely get base API URL from Vite environment variables (VITE_API_URL or VITE_BACKEND_URL)
 const rawBaseUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || '/api') as string;
@@ -70,6 +70,14 @@ export async function getDocumentsApi(): Promise<PDFDocument[]> {
 
   const data = await parseJsonResponse(res, 'Failed to fetch documents');
   return data.documents || [];
+}
+
+export async function getDocumentStatusApi(documentId: string): Promise<DocumentStatusResponse> {
+  const res = await fetch(`${API_BASE}/documents/${documentId}/status`, {
+    headers: getHeaders(true),
+  });
+
+  return parseJsonResponse(res, 'Failed to fetch document status');
 }
 
 export async function uploadDocumentApi(file: File): Promise<UploadResponse> {

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { PDFDocument, Conversation, Message } from '../types';
 import {
   getDocumentsApi,
+  getDocumentStatusApi,
   uploadDocumentApi,
   deleteDocumentApi,
   getConversationsApi,
@@ -116,7 +117,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAuthenticated, fetchDocuments, fetchConversations]);
 
-  // Upload Document
+  // Compute key of currently processing documents to drive polling
+  const processingDocIdsKey = documents
+    .filter((doc) => doc.status === 'PROCESSING')
+    .map((doc) => doc.id)
+    .sort()
+    .join(',');
+
+  // Poll status endpoint every 2.5s for documents in PROCESSING state
+  useEffect(() => {
+    if (!isAuthenticated || !processingDocIdsKey) return;
+
+    const docIds = processingDocIdsKey.split(',').filter(Boolean);
+    if (docIds.length === 0) return;
+
+    let isMounted = true;
+    let timerId: NodeJS.Timeout | null = null;
+
+    const pollProcessingDocs = async () => {
+      try {
+        const results = await Promise.all(
+          docIds.map(async (id) => {
+            try {
+              return await getDocumentStatusApi(id);
+            } catch (err) {
+              // Network hiccup: keep state, don't crash
+              return null;
+            }
+          })
+        );
+
+        if (!isMounted) return;
+
+        setDocuments((prevDocs) => {
+          let hasChanges = false;
+          const nextDocs = prevDocs.map((doc) => {
+            const res = results.find((r) => r && r.documentId === doc.id);
+            if (!res) return doc;
+
+            if (res.status !== doc.status || res.totalChunks !== doc.totalChunks) {
+              hasChanges = true;
+              if (res.status === 'ACTIVE' && doc.status !== 'ACTIVE') {
+                addToast(`"${doc.filename}" is processed and ready for chat!`, 'success');
+              } else if (res.status === 'FAILED' && doc.status !== 'FAILED') {
+                addToast(`Processing failed for "${doc.filename}".`, 'error');
+              }
+              return {
+                ...doc,
+                status: res.status,
+                totalChunks: res.totalChunks,
+                updatedAt: res.updatedAt,
+              };
+            }
+            return doc;
+          });
+
+          return hasChanges ? nextDocs : prevDocs;
+        });
+      } catch (pollErr) {
+        // Transient poll error
+      }
+
+      if (isMounted) {
+        timerId = setTimeout(pollProcessingDocs, 2500);
+      }
+    };
+
+    timerId = setTimeout(pollProcessingDocs, 2500);
+
+    return () => {
+      isMounted = false;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [isAuthenticated, processingDocIdsKey, addToast]);
+
+  // Upload Document (asynchronous flow: HTTP 202 -> status polling)
   const uploadDocument = async (file: File) => {
     if (!file || file.type !== 'application/pdf') {
       addToast('Please select a valid PDF document', 'error');
@@ -124,32 +199,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setIsUploading(true);
-    setUploadProgress(20);
 
     try {
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => (prev < 85 ? prev + 15 : prev));
-      }, 300);
-
       const res = await uploadDocumentApi(file);
 
-      clearInterval(interval);
-      setUploadProgress(100);
+      // Add document to UI immediately with PROCESSING status
+      const newDoc: PDFDocument = {
+        id: res.documentId,
+        filename: file.name,
+        size: file.size,
+        totalChunks: 0,
+        status: 'PROCESSING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-      addToast(`"${file.name}" uploaded and processed into ${res.totalChunks} vectors!`, 'success');
-      await fetchDocuments();
-      
-      // Auto-select uploaded document for focused RAG questions
-      setSelectedDocumentId(res.documentId);
+      setDocuments((prev) => [newDoc, ...prev.filter((d) => d.id !== res.documentId)]);
+      addToast(`"${file.name}" uploaded. Processing has started.`, 'info');
+
+      // Fetch fresh document list from backend
+      fetchDocuments().catch(() => {});
     } catch (err: any) {
       addToast(err.message || 'Failed to upload PDF', 'error');
     } finally {
-      setTimeout(() => {
-        setIsUploading(false);
-        setUploadProgress(0);
-      }, 500);
+      setIsUploading(false);
     }
   };
+
+  // Safe document selection: only ACTIVE documents can be selected for RAG
+  const handleSetSelectedDocumentId = useCallback(
+    (id: string | undefined) => {
+      if (!id) {
+        setSelectedDocumentId(undefined);
+        return;
+      }
+
+      const doc = documents.find((d) => d.id === id);
+      if (doc) {
+        if (doc.status === 'PROCESSING') {
+          addToast(`"${doc.filename}" is still processing. It will be ready for chat once complete.`, 'info');
+          return;
+        }
+        if (doc.status === 'FAILED') {
+          addToast(`"${doc.filename}" failed processing and cannot be selected for chat.`, 'error');
+          return;
+        }
+        if (doc.status !== 'ACTIVE') {
+          addToast(`"${doc.filename}" is not available for chat.`, 'error');
+          return;
+        }
+      }
+
+      setSelectedDocumentId(id);
+    },
+    [documents, addToast],
+  );
 
   // Delete Document
   const deleteDocument = async (id: string) => {
@@ -192,6 +296,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Send Message & handle SSE response streaming
   const sendMessage = async (text: string) => {
     if (!text.trim() || isStreaming) return;
+
+    // Verify selected document is ready before sending
+    const selectedDoc = documents.find((d) => d.id === selectedDocumentId);
+    if (selectedDoc) {
+      if (selectedDoc.status === 'PROCESSING') {
+        addToast(`"${selectedDoc.filename}" is still processing. Please wait until it is ready.`, 'error');
+        return;
+      }
+      if (selectedDoc.status === 'FAILED') {
+        addToast(`"${selectedDoc.filename}" failed processing and cannot be used for chat.`, 'error');
+        return;
+      }
+      if (selectedDoc.status !== 'ACTIVE') {
+        addToast(`"${selectedDoc.filename}" is not available for chat.`, 'error');
+        return;
+      }
+    }
 
     const userMsg: Message = {
       role: 'user',
@@ -256,7 +377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         documents,
         selectedDocumentId,
-        setSelectedDocumentId,
+        setSelectedDocumentId: handleSetSelectedDocumentId,
         isLoadingDocuments,
         isUploading,
         uploadProgress,
