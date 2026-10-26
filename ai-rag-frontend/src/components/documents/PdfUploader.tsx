@@ -1,15 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { UploadCloud, FileText, CheckCircle2, AlertCircle, Sparkles, Cpu } from 'lucide-react';
-import { formatBytes } from '../../utils/formatters';
+import { UploadCloud, FileText, Sparkles } from 'lucide-react';
 
 export const PdfUploader: React.FC = () => {
-  const { uploadDocument, isUploading, uploadProgress } = useApp();
+  const { uploadDocument, isUploading } = useApp();
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (isUploading) return;
     setIsDragOver(true);
   };
 
@@ -21,15 +21,17 @@ export const PdfUploader: React.FC = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    if (isUploading) return;
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       uploadDocument(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isUploading) return;
     if (e.target.files && e.target.files[0]) {
       uploadDocument(e.target.files[0]);
-      e.target.value = ''; // Reset input
+      e.target.value = ''; // Reset input to allow re-uploading the same file if needed
     }
   };
 
@@ -40,6 +42,7 @@ export const PdfUploader: React.FC = () => {
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="application/pdf"
+        disabled={isUploading}
         className="hidden"
       />
 
@@ -48,12 +51,12 @@ export const PdfUploader: React.FC = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !isUploading && fileInputRef.current?.click()}
-        className={`relative overflow-hidden rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer text-center ${
+        className={`relative overflow-hidden rounded-3xl p-8 border-2 border-dashed transition-all duration-300 text-center ${
           isDragOver
             ? 'border-brand-400 bg-brand-500/10 scale-[1.01] shadow-glow-indigo'
             : isUploading
-            ? 'border-brand-500/50 bg-slate-900/60 cursor-wait'
-            : 'border-slate-700/80 bg-slate-900/40 hover:border-brand-500/50 hover:bg-slate-900/80'
+            ? 'border-brand-500/50 bg-slate-900/60 cursor-wait pointer-events-none'
+            : 'border-slate-700/80 bg-slate-900/40 hover:border-brand-500/50 hover:bg-slate-900/80 cursor-pointer'
         }`}
       >
         {/* Background glow overlay */}
@@ -87,7 +90,7 @@ export const PdfUploader: React.FC = () => {
                 Drag & Drop PDF Document Here
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                or click to browse your local filesystem (Max 25MB)
+                or click to browse your local filesystem (Max 10MB)
               </p>
             </div>
 

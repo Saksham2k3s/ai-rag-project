@@ -10,6 +10,7 @@ import {
   streamChatApi,
 } from '../services/api';
 import { useAuth } from './AuthContext';
+import { formatUploadErrorMessage } from '../utils/formatters';
 
 export interface ToastItem {
   id: string;
@@ -68,11 +69,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    setToasts((prev) => {
+      // Prevent duplicate notification if the same message and type is already visible
+      if (prev.some((t) => t.message === message && t.type === type)) {
+        return prev;
+      }
+      const id = Math.random().toString(36).substring(2, 9);
+      setTimeout(() => {
+        setToasts((current) => current.filter((t) => t.id !== id));
+      }, 4000);
+      return [...prev, { id, message, type }];
+    });
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -193,8 +200,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Upload Document (asynchronous flow: HTTP 202 -> status polling)
   const uploadDocument = async (file: File) => {
-    if (!file || file.type !== 'application/pdf') {
-      addToast('Please select a valid PDF document', 'error');
+    // Prevent concurrent duplicate submissions
+    if (isUploading) {
+      return;
+    }
+
+    if (!file) {
+      addToast('Please select a PDF file to upload.', 'error');
+      return;
+    }
+
+    // Validate file type (extension and MIME type)
+    const hasPdfExtension = file.name.toLowerCase().endsWith('.pdf');
+    const isPdfMime = file.type === 'application/pdf' || file.type === '';
+    if (!hasPdfExtension || (!isPdfMime && file.type)) {
+      addToast('Unsupported file type. Please upload a valid PDF document (.pdf).', 'error');
+      return;
+    }
+
+    // Validate file size (10MB limit to align with backend multer limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      addToast('File size exceeds the 10MB limit. Please choose a smaller PDF.', 'error');
+      return;
+    }
+
+    // Validate non-empty file
+    if (file.size === 0) {
+      addToast('The selected PDF file is empty. Please choose a valid PDF.', 'error');
+      return;
+    }
+
+    // Check authentication status
+    if (!isAuthenticated) {
+      addToast('Your session has expired. Please sign in again to upload documents.', 'error');
       return;
     }
 
@@ -215,12 +254,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       setDocuments((prev) => [newDoc, ...prev.filter((d) => d.id !== res.documentId)]);
-      addToast(`"${file.name}" uploaded. Processing has started.`, 'info');
+      
+      // Clear success notification matching requirement 1
+      addToast('PDF uploaded successfully! Processing has started.', 'success');
 
-      // Fetch fresh document list from backend
+      // Fetch fresh document list from backend in background
       fetchDocuments().catch(() => {});
     } catch (err: any) {
-      addToast(err.message || 'Failed to upload PDF', 'error');
+      const friendlyError = formatUploadErrorMessage(err);
+      addToast(friendlyError, 'error');
     } finally {
       setIsUploading(false);
     }
