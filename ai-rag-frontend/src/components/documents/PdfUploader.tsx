@@ -90,7 +90,7 @@ export const PdfUploader: React.FC = () => {
                 Drag & Drop PDF Document Here
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                or click to browse your local filesystem (Max 10MB)
+                or click to browse your local filesystem (Max 12MB)
               </p>
             </div>
 

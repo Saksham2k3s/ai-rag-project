@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { redis } from "../config/redis.js";
+import { createRedisClient } from "../config/redis.js";
 import { prisma } from "../services/prisma.service.js";
 import { downloadPdf } from "../services/storage.service.js";
 import { extractTextFromPdf } from "../services/pdf.service.js";
@@ -15,6 +15,9 @@ type DocumentJobData = {
   ownerId: string;
   storagePath: string;
 };
+
+// Dedicated Redis connection for the BullMQ worker to eliminate command contention
+export const workerRedis = createRedisClient();
 
 export const documentWorker = new Worker<DocumentJobData>(
   "document-processing",
@@ -57,10 +60,16 @@ export const documentWorker = new Worker<DocumentJobData>(
 
     console.log(`[Job ${job.id}] Generated ${chunks.length} text chunks. Creating embeddings...`);
 
-    // 4. Generate embeddings.
-    const embeddings = await generateEmbeddings(chunks);
+    // 4. Generate embeddings with rate limit resilience and progress reporting
+    const embeddings = await generateEmbeddings(chunks, async (processed, total) => {
+      const percent = Math.round((processed / total) * 100);
+      if (processed % 10 === 0 || processed === total) {
+        await job.updateProgress(percent);
+        console.log(`[Job ${job.id}] Embedding progress: ${processed}/${total} chunks (${percent}%)`);
+      }
+    });
 
-    // 5. Store the chunks in Qdrant with deterministic IDs.
+    // 5. Store the chunks in Qdrant with deterministic IDs (batched for safety)
     console.log(`[Job ${job.id}] Upserting ${chunks.length} chunks into Qdrant...`);
     await insertDocumentChunks(documentId, ownerId, chunks, embeddings);
 
@@ -97,8 +106,12 @@ export const documentWorker = new Worker<DocumentJobData>(
     };
   },
   {
-    connection: redis,
-    concurrency: 2,
+    connection: workerRedis,
+    concurrency: 1, // Single document processing to stay within Gemini token quota
+    lockDuration: 300000, // 5 minutes (prevents lock expiration during rate-limit pauses)
+    lockRenewTime: 60000, // Renew lock every 60s
+    stalledInterval: 60000, // Check stalled jobs every 60s
+    maxStalledCount: 2,
   },
 );
 

@@ -14,7 +14,7 @@ const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: 12 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype !== "application/pdf") {
@@ -28,7 +28,21 @@ const upload = multer({
 router.post(
   "/documents/upload",
   authenticate,
-  upload.single("file"),
+  (req, res, next) => {
+    upload.single("file")(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({
+            message: "File size exceeds the 12MB limit",
+          });
+        }
+        return res.status(400).json({
+          message: err.message || "Failed to upload file",
+        });
+      }
+      next();
+    });
+  },
   uploadDocument,
 );
 

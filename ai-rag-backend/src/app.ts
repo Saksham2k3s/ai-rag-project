@@ -41,10 +41,10 @@ async function reconcileStuckDocuments() {
           },
           {
             jobId: `reconcile-${doc.id}`,
-            attempts: 3,
+            attempts: 5,
             backoff: {
               type: "exponential",
-              delay: 2000,
+              delay: 10000,
             },
             removeOnComplete: 100,
             removeOnFail: 500,

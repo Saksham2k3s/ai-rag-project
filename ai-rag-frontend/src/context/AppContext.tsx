@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { PDFDocument, Conversation, Message } from '../types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { PDFDocument, Conversation, Message } from "../types";
 import {
   getDocumentsApi,
   getDocumentStatusApi,
@@ -8,14 +14,14 @@ import {
   getConversationsApi,
   getConversationByIdApi,
   streamChatApi,
-} from '../services/api';
-import { useAuth } from './AuthContext';
-import { formatUploadErrorMessage } from '../utils/formatters';
+} from "../services/api";
+import { useAuth } from "./AuthContext";
+import { formatUploadErrorMessage } from "../utils/formatters";
 
 export interface ToastItem {
   id: string;
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: "success" | "error" | "info";
 }
 
 interface AppContextType {
@@ -33,13 +39,13 @@ interface AppContextType {
   isLoadingConversation: boolean;
 
   toasts: ToastItem[];
-  addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  addToast: (message: string, type?: "success" | "error" | "info") => void;
   removeToast: (id: string) => void;
 
   fetchDocuments: () => Promise<void>;
   uploadDocument: (file: File) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
-  
+
   fetchConversations: () => Promise<void>;
   selectConversation: (id: string | undefined) => Promise<void>;
   startNewChat: () => void;
@@ -48,19 +54,25 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { isAuthenticated } = useAuth();
 
   // Document states
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | undefined>(undefined);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<
+    string | undefined
+  >(undefined);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Conversation & Chat states
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | undefined
+  >(undefined);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
@@ -68,19 +80,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToasts((prev) => {
-      // Prevent duplicate notification if the same message and type is already visible
-      if (prev.some((t) => t.message === message && t.type === type)) {
-        return prev;
-      }
-      const id = Math.random().toString(36).substring(2, 9);
-      setTimeout(() => {
-        setToasts((current) => current.filter((t) => t.id !== id));
-      }, 4000);
-      return [...prev, { id, message, type }];
-    });
-  }, []);
+  const addToast = useCallback(
+    (message: string, type: "success" | "error" | "info" = "info") => {
+      setToasts((prev) => {
+        // Prevent duplicate notification if the same message and type is already visible
+        if (prev.some((t) => t.message === message && t.type === type)) {
+          return prev;
+        }
+        const id = Math.random().toString(36).substring(2, 9);
+        setTimeout(() => {
+          setToasts((current) => current.filter((t) => t.id !== id));
+        }, 4000);
+        return [...prev, { id, message, type }];
+      });
+    },
+    [],
+  );
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -94,7 +109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const docs = await getDocumentsApi();
       setDocuments(docs);
     } catch (err: any) {
-      addToast(err.message || 'Failed to load documents', 'error');
+      addToast(err.message || "Failed to load documents", "error");
     } finally {
       setIsLoadingDocuments(false);
     }
@@ -107,7 +122,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const convs = await getConversationsApi();
       setConversations(convs);
     } catch (err: any) {
-      console.error('Failed to load conversations', err);
+      console.error("Failed to load conversations", err);
     }
   }, [isAuthenticated]);
 
@@ -126,16 +141,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Compute key of currently processing documents to drive polling
   const processingDocIdsKey = documents
-    .filter((doc) => doc.status === 'PROCESSING')
+    .filter((doc) => doc.status === "PROCESSING")
     .map((doc) => doc.id)
     .sort()
-    .join(',');
+    .join(",");
 
   // Poll status endpoint every 2.5s for documents in PROCESSING state
   useEffect(() => {
     if (!isAuthenticated || !processingDocIdsKey) return;
 
-    const docIds = processingDocIdsKey.split(',').filter(Boolean);
+    const docIds = processingDocIdsKey.split(",").filter(Boolean);
     if (docIds.length === 0) return;
 
     let isMounted = true;
@@ -151,7 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               // Network hiccup: keep state, don't crash
               return null;
             }
-          })
+          }),
         );
 
         if (!isMounted) return;
@@ -162,12 +177,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const res = results.find((r) => r && r.documentId === doc.id);
             if (!res) return doc;
 
-            if (res.status !== doc.status || res.totalChunks !== doc.totalChunks) {
+            if (
+              res.status !== doc.status ||
+              res.totalChunks !== doc.totalChunks
+            ) {
               hasChanges = true;
-              if (res.status === 'ACTIVE' && doc.status !== 'ACTIVE') {
-                addToast(`"${doc.filename}" is processed and ready for chat!`, 'success');
-              } else if (res.status === 'FAILED' && doc.status !== 'FAILED') {
-                addToast(`Processing failed for "${doc.filename}".`, 'error');
+              if (res.status === "ACTIVE" && doc.status !== "ACTIVE") {
+                addToast(
+                  `"${doc.filename}" is processed and ready for chat!`,
+                  "success",
+                );
+              } else if (res.status === "FAILED" && doc.status !== "FAILED") {
+                addToast(`Processing failed for "${doc.filename}".`, "error");
               }
               return {
                 ...doc,
@@ -206,34 +227,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (!file) {
-      addToast('Please select a PDF file to upload.', 'error');
+      addToast("Please select a PDF file to upload.", "error");
       return;
     }
 
     // Validate file type (extension and MIME type)
-    const hasPdfExtension = file.name.toLowerCase().endsWith('.pdf');
-    const isPdfMime = file.type === 'application/pdf' || file.type === '';
+    const hasPdfExtension = file.name.toLowerCase().endsWith(".pdf");
+    const isPdfMime = file.type === "application/pdf" || file.type === "";
     if (!hasPdfExtension || (!isPdfMime && file.type)) {
-      addToast('Unsupported file type. Please upload a valid PDF document (.pdf).', 'error');
+      addToast(
+        "Unsupported file type. Please upload a valid PDF document (.pdf).",
+        "error",
+      );
       return;
     }
 
-    // Validate file size (10MB limit to align with backend multer limit)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    // Validate file size (12MB limit to align with backend multer limit)
+    const MAX_FILE_SIZE = 12 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      addToast('File size exceeds the 10MB limit. Please choose a smaller PDF.', 'error');
+      addToast(
+        "File size exceeds the 12MB limit. Please choose a smaller PDF.",
+        "error",
+      );
       return;
     }
 
     // Validate non-empty file
     if (file.size === 0) {
-      addToast('The selected PDF file is empty. Please choose a valid PDF.', 'error');
+      addToast(
+        "The selected PDF file is empty. Please choose a valid PDF.",
+        "error",
+      );
       return;
     }
 
     // Check authentication status
     if (!isAuthenticated) {
-      addToast('Your session has expired. Please sign in again to upload documents.', 'error');
+      addToast(
+        "Your session has expired. Please sign in again to upload documents.",
+        "error",
+      );
       return;
     }
 
@@ -248,21 +281,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         filename: file.name,
         size: file.size,
         totalChunks: 0,
-        status: 'PROCESSING',
+        status: "PROCESSING",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      setDocuments((prev) => [newDoc, ...prev.filter((d) => d.id !== res.documentId)]);
-      
+      setDocuments((prev) => [
+        newDoc,
+        ...prev.filter((d) => d.id !== res.documentId),
+      ]);
+
       // Clear success notification matching requirement 1
-      addToast('PDF uploaded successfully! Processing has started.', 'success');
+      addToast("PDF uploaded successfully! Processing has started.", "success");
 
       // Fetch fresh document list from backend in background
       fetchDocuments().catch(() => {});
     } catch (err: any) {
       const friendlyError = formatUploadErrorMessage(err);
-      addToast(friendlyError, 'error');
+      addToast(friendlyError, "error");
     } finally {
       setIsUploading(false);
     }
@@ -278,16 +314,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const doc = documents.find((d) => d.id === id);
       if (doc) {
-        if (doc.status === 'PROCESSING') {
-          addToast(`"${doc.filename}" is still processing. It will be ready for chat once complete.`, 'info');
+        if (doc.status === "PROCESSING") {
+          addToast(
+            `"${doc.filename}" is still processing. It will be ready for chat once complete.`,
+            "info",
+          );
           return;
         }
-        if (doc.status === 'FAILED') {
-          addToast(`"${doc.filename}" failed processing and cannot be selected for chat.`, 'error');
+        if (doc.status === "FAILED") {
+          addToast(
+            `"${doc.filename}" failed processing and cannot be selected for chat.`,
+            "error",
+          );
           return;
         }
-        if (doc.status !== 'ACTIVE') {
-          addToast(`"${doc.filename}" is not available for chat.`, 'error');
+        if (doc.status !== "ACTIVE") {
+          addToast(`"${doc.filename}" is not available for chat.`, "error");
           return;
         }
       }
@@ -301,13 +343,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteDocument = async (id: string) => {
     try {
       await deleteDocumentApi(id);
-      addToast('Document deleted successfully', 'success');
+      addToast("Document deleted successfully", "success");
       if (selectedDocumentId === id) {
         setSelectedDocumentId(undefined);
       }
       await fetchDocuments();
     } catch (err: any) {
-      addToast(err.message || 'Failed to delete document', 'error');
+      addToast(err.message || "Failed to delete document", "error");
     }
   };
 
@@ -323,7 +365,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const conv = await getConversationByIdApi(id);
       setMessages(conv.messages || []);
     } catch (err: any) {
-      addToast(err.message || 'Failed to load conversation messages', 'error');
+      addToast(err.message || "Failed to load conversation messages", "error");
     } finally {
       setIsLoadingConversation(false);
     }
@@ -342,22 +384,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Verify selected document is ready before sending
     const selectedDoc = documents.find((d) => d.id === selectedDocumentId);
     if (selectedDoc) {
-      if (selectedDoc.status === 'PROCESSING') {
-        addToast(`"${selectedDoc.filename}" is still processing. Please wait until it is ready.`, 'error');
+      if (selectedDoc.status === "PROCESSING") {
+        addToast(
+          `"${selectedDoc.filename}" is still processing. Please wait until it is ready.`,
+          "error",
+        );
         return;
       }
-      if (selectedDoc.status === 'FAILED') {
-        addToast(`"${selectedDoc.filename}" failed processing and cannot be used for chat.`, 'error');
+      if (selectedDoc.status === "FAILED") {
+        addToast(
+          `"${selectedDoc.filename}" failed processing and cannot be used for chat.`,
+          "error",
+        );
         return;
       }
-      if (selectedDoc.status !== 'ACTIVE') {
-        addToast(`"${selectedDoc.filename}" is not available for chat.`, 'error');
+      if (selectedDoc.status !== "ACTIVE") {
+        addToast(
+          `"${selectedDoc.filename}" is not available for chat.`,
+          "error",
+        );
         return;
       }
     }
 
     const userMsg: Message = {
-      role: 'user',
+      role: "user",
       content: text.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -368,8 +419,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Create placeholder for assistant response
     const assistantMsgPlaceholder: Message = {
-      role: 'assistant',
-      content: '',
+      role: "assistant",
+      content: "",
       createdAt: new Date().toISOString(),
     };
 
@@ -383,7 +434,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setMessages((prev) => {
           const updated = [...prev];
           const lastIndex = updated.length - 1;
-          if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
+          if (lastIndex >= 0 && updated[lastIndex].role === "assistant") {
             updated[lastIndex] = {
               ...updated[lastIndex],
               content: updated[lastIndex].content + chunkText,
@@ -401,16 +452,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       (errorMsg) => {
         setIsStreaming(false);
-        addToast(`Chat Error: ${errorMsg}`, 'error');
+        addToast(`Chat Error: ${errorMsg}`, "error");
         // Remove empty placeholder message if no response arrived
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-          if (last && last.role === 'assistant' && !last.content) {
+          if (last && last.role === "assistant" && !last.content) {
             return prev.slice(0, -1);
           }
           return prev;
         });
-      }
+      },
     );
   };
 
@@ -448,7 +499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error("useApp must be used within an AppProvider");
   }
   return context;
 };

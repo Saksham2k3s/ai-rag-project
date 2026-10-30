@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { documentWorker } from "./workers/document.worker.js";
+import { documentWorker, workerRedis } from "./workers/document.worker.js";
 import { redis } from "./config/redis.js";
 
 console.log("==========================================");
@@ -20,9 +20,10 @@ async function handleShutdown(signal: string) {
     await documentWorker.close();
     console.log("BullMQ worker closed.");
 
-    // Close Redis connection
-    await redis.quit();
-    console.log("Redis connection closed.");
+    // Close Redis connections
+    await workerRedis.quit().catch(() => {});
+    await redis.quit().catch(() => {});
+    console.log("Redis connections closed.");
 
     console.log("Worker process exited gracefully.");
     process.exit(0);
