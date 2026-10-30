@@ -75,6 +75,7 @@ export async function insertDocumentChunks(
   ownerId: string,
   chunks: string[],
   embeddings: number[][],
+  batchSize = 100,
 ) {
   // Clean up any existing chunks for this document in case of retry
   await deleteDocumentChunks(documentId);
@@ -90,10 +91,14 @@ export async function insertDocumentChunks(
     },
   }));
 
-  await qdrant.upsert(COLLECTION_NAME, {
-    wait: true,
-    points,
-  });
+  // Upsert in batches to avoid large payload timeouts or network limits
+  for (let i = 0; i < points.length; i += batchSize) {
+    const batch = points.slice(i, i + batchSize);
+    await qdrant.upsert(COLLECTION_NAME, {
+      wait: true,
+      points: batch,
+    });
+  }
 
   console.log(`${points.length} chunks inserted into Qdrant for document ${documentId}`);
 }
